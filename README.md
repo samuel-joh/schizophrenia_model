@@ -1,1 +1,1 @@
-# schizphrenia_model
+# Computational Neurology Workshop 2025
