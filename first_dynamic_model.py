@@ -4,26 +4,25 @@ import matplotlib.pyplot as plt
 import os
 from neurolib.models.hopf import HopfModel
 import numpy as np
-from nilearn.connectome import ConnectivityMeasure
 from neurolib.optimize.evolution import Evolution
 from neurolib.utils.parameterSpace import ParameterSpace
+from nilearn.connectome import ConnectivityMeasure
 from os.path import join as pjoin
 import scipy.io as sio
+import neurolib.utils.functions as func
+import seaborn
 
 ### load structural connectivity matrix and normalize it ###
 data_dir = pjoin(os.getcwd(), 'data_for_modeling')
 mat_name = pjoin(data_dir, 'atlas-4S156Parcels_desc-mean_sc.mat')
 sc_mat = sio.loadmat(mat_name)
 sc_mat = np.array(sc_mat["connectivity"])
-print(sc_mat)
 sc_mat_normalized = sc_mat/np.max(sc_mat)  # sc_mat * (0.2/np.max(sc_mat))
-print(np.max(sc_mat_normalized))
 ######
 
 ### load empirical data ###
-os.chdir(pjoin(os.getcwd(), "data_for_modeling", "extracted_timeseries_schizophrenia"))
-
-subfolders = [os.path.join(f.path, "func") for f in os.scandir(os.getcwd()) if f.is_dir() and "sub-" in f.name]
+subfolders = [os.path.join(f.path, "func") for f in os.scandir(pjoin(os.getcwd(), "data_for_modeling", "extracted_timeseries"))
+              if f.is_dir() and "sub-" in f.name]
 
 data = []  # holds all control and patient signal arrays
 for folder in subfolders:
@@ -52,30 +51,31 @@ data_schizo = data[-23:]
 data_control_vis = [array[vision_columns] for array in data_control]
 data_schizo_vis = [array[vision_columns] for array in data_schizo]
 
-n_slices, n_regions = np.shape(data_control_vis[0])  # number of slices and regions
-single_control = np.mean(data_control_vis, axis=0)  # data_control_vis[0]
-single_schizo = np.mean(data_schizo_vis, axis=0)  # data_schizo_vis[0]
+n_slices, n_regions = np.shape(data_control[0])  # number of slices and regions
+control_mean = np.mean(data_control, axis=0)  # data_control_vis[0]
+schizo_mean = np.mean(data_schizo, axis=0)  # data_schizo_vis[0]
 ######
 
-# TODO: print sc_mat and compare to data sc, normalize sc_mat to 0.2 and match omega to paper ; Automate find least error between both
+# TODO: Automate find least error between both
 ### Hopf model 2x2 ###
 fig_model, ax_model = plt.subplots(1, 2)
-label_model = "Vision (model)"
+label_model = "Whole brain model"
 # n_regions must be < 20, otherwise model explodes
-cmat = vision_sc_mat  # normalized sc_mat with only the visual areas
+cmat = sc_mat_normalized  # vision_sc_mat  # normalized sc_mat with only the visual areas
 dmat = np.full((n_regions, n_regions), 0)  # no delays as starting point
 
 hopfModel = HopfModel(Cmat=cmat, Dmat=dmat)
 
 # params for modelling healthy people
-hopfModel.params['duration'] = len(single_control) * 2 * 1000  # 304 - 8 = 296 seconds
+hopfModel.params['duration'] = len(control_mean) * 2 * 1000  # 304 - 8 = 296 seconds
 hopfModel.params['sampling_dt'] = 2 * 1000  # output signal every 2 seconds
-hopfModel.params['sigma_ou'] = 0.4  # set the noise here [0, 2]
-hopfModel.params['K_gl'] = 2.5  # global coupling [0, 5]
-hopfModel.params['w'] = 1 * np.pi  # intrinsic angular frequency of the oscillation (omega) [0, 3pi]
-hopfModel.params['a'] = 0  # bifurcation parameter (we will disregard it for now) [-1, 1]
+hopfModel.params['sigma_ou'] = 0.14  # set the noise here [0, 2]
+hopfModel.params['K_gl'] = 0.15  # global coupling [0, 5]
+hopfModel.params['w'] = 2.35  # intrinsic angular frequency of the oscillation (omega) [0, 3pi]
+hopfModel.params['a'] = 0.20  # bifurcation parameter (we will disregard it for now) [-1, 1]
 
 hopfModel.run()
+
 t, x = hopfModel.getOutputs()["t"], hopfModel.getOutputs()["x"]  # get time slices and real values of Hopf oscillator
 for idx, region in enumerate(x):
     ax_model[0].plot(t / 1000, x[idx], color="red", label=label_model)
@@ -87,9 +87,8 @@ ax_model[0].set_title(f'Time Series for Vision regions \n{vision_columns[:2]}, .
 ax_model[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')  # Legend outside the plot
 
 correlation_measure = ConnectivityMeasure(kind='correlation')
-functional_connectivity = correlation_measure.fit_transform([x.T])  # functional connectivity measure
-tcf = ax_model[1].imshow(np.squeeze(functional_connectivity), cmap=plt.cm.Blues)
-cbar = fig_model.colorbar(tcf, ax=ax_model, orientation='vertical', fraction=0.02, pad=0.04, label="Connectivity")
+functional_connectivity = func.fc(x.T)  # functional connectivity measure
+seaborn.heatmap(functional_connectivity, ax=ax_model[1], label="Connectivity")
 fig_model.suptitle("FC and BOLD from Hopf model", fontsize=16)
 ######
 
@@ -98,7 +97,7 @@ fig_emp, ax_emp = plt.subplots(1, 2)
 label = "Vision (control)"
 labeled = False
 for idx, col in enumerate(vision_columns):
-    ax_emp[0].plot(np.arange(0, 296, 2), single_control.T[idx], color="blue", label=label)  # Plot each column starting with 'LH_Vis' or 'RH_Vis'
+    ax_emp[0].plot(np.arange(0, 296, 2), control_mean.T[idx], color="blue", label=label)  # Plot each column starting with 'LH_Vis' or 'RH_Vis'
     label = "_nolegend_"
 
 ax_emp[0].set_xlabel('Time [s]')
@@ -107,70 +106,73 @@ ax_emp[0].set_title(f'Time Series for Vision regions \n{vision_columns[:2]}, ...
 ax_emp[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')  # Legend outside the plot
 
 correlation_measure = ConnectivityMeasure(kind='correlation')
-functional_connectivity = correlation_measure.fit_transform([single_control])
-tcf = ax_emp[1].imshow(np.squeeze(functional_connectivity), cmap=plt.cm.Blues)
-fig_emp.colorbar(tcf, ax=ax_emp, orientation='vertical', fraction=0.02, pad=0.04, label="Connectivity")
+functional_connectivity = func.fc(control_mean)  # functional connectivity measure
+seaborn.heatmap(functional_connectivity, ax=ax_emp[1], label="Connectivity")
 fig_emp.suptitle("FC and BOLD from empirical data", fontsize=16)
 plt.show()
 ######
 
 
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
+    # Beispiel: Fitness-Funktion, die Korrelationsmatrix vergleicht
+    correlation_measure = ConnectivityMeasure(kind='correlation')
+    emp_fc = func.fc(control_mean.T)
+    print(emp_fc.shape)
 
-# # Beispiel: Fitness-Funktion, die Korrelationsmatrix vergleicht
-# correlation_measure = ConnectivityMeasure(kind='correlation')
-# emp_fc = correlation_measure.fit_transform([single_control])
-# emp_fc = emp_fc.reshape(emp_fc.shape[1], emp_fc.shape[2])
-#
-# def fitness_function(traj):
-#     model = evolution.getModelFromTraj(traj)
-#     model.run()
-#     t, x = hopfModel.getOutputs()["t"], hopfModel.getOutputs()["x"]  # get time slices and real values of Hopf oscillator
-#
-#     # Simulierte FC
-#     sim_fc = np.corrcoef(x)
-#
-#     # Flatten (nur obere Dreiecksmatrix ohne Diagonale vergleichen)
-#     idx = np.triu_indices_from(emp_fc, k=1)
-#     sim_fc_flat = sim_fc[idx]
-#     emp_fc_flat = emp_fc[idx]
-#
-#     # Ähnlichkeit als Korrelationskoeffizient der FCs
-#     fitness_tuple  = ()
-#     fitness_tuple  += (np.corrcoef(sim_fc_flat, emp_fc_flat)[0, 1],)
-#     return fitness_tuple , {}
-#
-#
-# hopfModel.params['duration'] = 6 * 2 * 1000  # 304 - 8 = 296 seconds
-# hopfModel.params['sampling_dt'] = 2 * 1000  # output signal every 2 seconds
-# pars = ParameterSpace(
-#     ["w", "a", "K_gl"],
-#     [[0.1, np.pi], [-0.3, 0.3], [0.0, 3.0]]
-# )
-#
-# evolution = Evolution(
-#     model=hopfModel,
-#     parameterSpace=pars,
-#     evalFunction=fitness_function,
-#     POP_INIT_SIZE=1600,
-#     POP_SIZE=160,
-#     NGEN=100
-# )
-#
-# evolution.run()
-#
-# # the current population is always accesible via
-# pop = evolution.pop
-# # we can also use the functions registered to deap
-# # to select the best of the population:
-# best_10 = evolution.toolbox.selBest(pop, k=10)
-# # Remember, we performed a minimization so a fitness
-# # of 0 is optimal
-# print("Best individual", best_10[0], "fitness", best_10[0].fitness)
-# evolution.info(plot=True)
-# run model with found params
-# hopfModel = HopfModel()
-# hopfModel.set_params(best_10[0].params)
-# hopfModel.run()
+    def fitness_function(traj):
+        model = evolution.getModelFromTraj(traj)
+        model.run()
+        t, x = model.getOutputs()["t"], model.getOutputs()["x"]  # get time slices and real values of Hopf oscillator
+
+        # Simulierte FC
+        sim_fc = np.corrcoef(x)
+
+        # Flatten (nur obere Dreiecksmatrix ohne Diagonale vergleichen)
+        idx = np.triu_indices_from(emp_fc, k=1)
+        sim_fc_flat = sim_fc[idx]
+        emp_fc_flat = emp_fc[idx]
+
+        # Ähnlichkeit als Korrelationskoeffizient der FCs
+        fitness_tuple = ()
+        fitness_tuple += (np.corrcoef(sim_fc_flat, emp_fc_flat)[0, 1],)
+        return fitness_tuple, {}
+
+
+    hopfModel.params['duration'] = 6 * 2 * 1000  # 304 - 8 = 296 seconds
+    hopfModel.params['sampling_dt'] = 2 * 1000  # output signal every 2 seconds
+    pars = ParameterSpace(
+        ["sigma_ou", "w", "a", "K_gl"],
+        [[0.0, 0.5], [0.1, np.pi], [-0.3, 0.3], [0.0, 3.0]]
+    )
+
+    evolution = Evolution(
+        model=hopfModel,
+        parameterSpace=pars,
+        evalFunction=fitness_function,
+        POP_INIT_SIZE=1600,
+        POP_SIZE=160,
+        NGEN=100
+    )
+
+    evolution.run()
+
+    EVOLUTION_DILL = "saved_evolution.dill"
+    evolution.saveEvolution(EVOLUTION_DILL)
+    # the current population is always accesible via
+    pop = evolution.pop
+    # we can also use the functions registered to deap
+    # to select the best of the population:
+    best_10 = evolution.toolbox.selBest(pop, k=10)
+    # Remember, we performed a minimization so a fitness
+    # of 0 is optimal
+    print("Best individual", best_10[0], "fitness", best_10[0].fitness)
+    evolution.info(plot=True)
+    # run model with found params
+    # hopfModel = HopfModel()
+    # hopfModel.set_params(best_10[0].params)
+    # hopfModel.run()
 
 
 
