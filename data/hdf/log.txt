@@ -1,0 +1,57 @@
+--- Info summary ---
+Valid: 200
+Mean score (weighted fitness): 0.21
+Parameter distribution (Generation 124):
+sigma_ou:        mean: 0.1706,   std: 0.0666
+w:       mean: 2.5787,   std: 0.4898
+a:       mean: 0.1818,   std: 0.0878
+K_gl:    mean: 0.3332,   std: 0.2768
+--------------------
+Best 5 individuals:
+Printing 5 individuals
+Individual 0
+        Fitness values:  0.27
+        Score:  0.27
+        Weighted fitness:  0.27
+        Stats mean 0.27 std 0.00 min 0.27 max 0.27
+        model.params["sigma_ou"] = 0.21
+        model.params["w"] = 3.07
+        model.params["a"] = 0.15
+        model.params["K_gl"] = 0.11
+Individual 1
+        Fitness values:  0.25
+        Score:  0.25
+        Weighted fitness:  0.25
+        Stats mean 0.25 std 0.00 min 0.25 max 0.25
+        model.params["sigma_ou"] = 0.21
+        model.params["w"] = 2.42
+        model.params["a"] = 0.21
+        model.params["K_gl"] = 0.25
+Individual 2
+        Fitness values:  0.24
+        Score:  0.24
+        Weighted fitness:  0.24
+        Stats mean 0.24 std 0.00 min 0.24 max 0.24
+        model.params["sigma_ou"] = 0.22
+        model.params["w"] = 3.06
+        model.params["a"] = 0.27
+        model.params["K_gl"] = 0.12
+Individual 3
+        Fitness values:  0.24
+        Score:  0.24
+        Weighted fitness:  0.24
+        Stats mean 0.24 std 0.00 min 0.24 max 0.24
+        model.params["sigma_ou"] = 0.17
+        model.params["w"] = 2.48
+        model.params["a"] = 0.23
+        model.params["K_gl"] = 0.31
+Individual 4
+        Fitness values:  0.24
+        Score:  0.24
+        Weighted fitness:  0.24
+        Stats mean 0.24 std 0.00 min 0.24 max 0.24
+        model.params["sigma_ou"] = 0.14
+        model.params["w"] = 2.31
+        model.params["a"] = 0.21
+        model.params["K_gl"] = 0.09
+--------------------
