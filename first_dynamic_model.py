@@ -67,6 +67,7 @@ def plotVisionEmpirical(bolds_emp, vision_columns):
     plt.show()
     ######
 
+
 # ref: https://neurolib-dev.github.io/examples/example-2-evolutionary-optimization-minimal/
 def fitness_function(traj):
     model = evolution.getModelFromTraj(traj)
