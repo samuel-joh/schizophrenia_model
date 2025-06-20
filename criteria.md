@@ -1,0 +1,5 @@
+- How well are hypotheses?
+- How clear are presented results?
+- Are hypotheses scientifically grounded?
+- Transparency and reproducibility
+- Readable, well-commented code
