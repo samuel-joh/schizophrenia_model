@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+from scipy import stats
 from neurolib.models.hopf import HopfModel
 from neurolib.models.pheno_hopf import PhenoHopfModel, timeIntegration
 import numpy as np
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     vision_columns_mask = np.array([i in vision_columns_indices for i in range(n_regions)])
 
     # mean a over all optimal a's from healthy people
-    healthy_a = 0.1459893048128342
+    healthy_a = 0.17549191005073358
 
     n_runs = 2
     a_vals = np.linspace(-0.1, 0.75, 50)
@@ -271,25 +272,54 @@ if __name__ == "__main__":
         sz_optimal_as.append(a)
         sz_optimal_corrs.append(corr)
         plt.scatter(sz_optimal_as, sz_optimal_corrs)
-        plt.title(f"SZ FC model vs. emp with optimal a")
+        plt.title(f"Optimal a for SZ FC correlation model vs. emp")
         plt.xlabel("a")
-        plt.ylabel("Korrelation")
+        plt.ylabel("correlation")
+    plt.grid()
     plt.show()
+
     for a, corr in healthy_max_corr:
         healthy_optimal_as.append(a)
         healthy_optimal_corrs.append(corr)
         plt.scatter(healthy_optimal_as, healthy_optimal_corrs)
-        plt.title(f"Healthy FC model vs. emp with optimal a")
+        plt.title(f"Optimal a for healthy FC correlation model vs. emp")
         plt.xlabel("a")
-        plt.ylabel("Korrelation")
-    plt.show()
-    plt.scatter(sz_optimal_as, sz_optimal_corrs)
-    plt.scatter(healthy_optimal_as, healthy_optimal_corrs)
-    plt.title(f"Healthy FC model vs. emp with optimal a")
-    plt.xlabel("a")
-    plt.ylabel("Korrelation")
+        plt.ylabel("correlation")
+    plt.grid()
     plt.show()
 
-    print(f"Mean a over all optimal SZ a's: {np.mean(sz_optimal_as)}")  # = 0.45331890331890334
-    print(f"Mean a over all optimal healthy a's: {np.mean(healthy_optimal_as)}")  # = 0.5643603870876599
+    mean_sz = np.mean(sz_optimal_as)
+    median_sz = np.median(sz_optimal_as)
+    mean_healthy = np.mean(healthy_optimal_as)
+    median_healthy = np.median(healthy_optimal_as)
+    plt.scatter(sz_optimal_as, sz_optimal_corrs)
+    plt.scatter(healthy_optimal_as, healthy_optimal_corrs)
+    plt.axvline(mean_sz, color="blue", linestyle='--', label=f'SZ mean a ({mean_sz:.4f})')
+    plt.axvline(median_sz, color="blue", linestyle='-', label=f'SZ median a ({median_sz:.4f})')
+    plt.axvline(mean_healthy, color="orange", linestyle='--', label=f'Healthy mean a({mean_healthy:.4f})')
+    plt.axvline(median_healthy, color="orange", linestyle='-', label=f'Healthy median a({median_healthy:.4f})')
+    plt.title(f"Optimal a for healthy and SZ FC correlation model vs. emp")
+    plt.xlabel("a")
+    plt.ylabel("correlation")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.tight_layout()
+    plt.grid()
+    plt.show()
+
+    print(f"Optimal SZ a's\n"
+          f"range (min - max): {np.min(sz_optimal_as)} - {np.max(sz_optimal_as)}\n"
+          f"mean: {np.mean(sz_optimal_as)}\n"  # = 0.45331890331890334
+          f"median: {np.median(sz_optimal_as)}\n"
+          f"standard deviation: {np.std(sz_optimal_as)}\n"
+          f"variance: {np.var(sz_optimal_as)}\n")
+
+    print(f"Optimal healthy a's\n"
+          f"range (min - max): {np.min(healthy_optimal_as)} - {np.max(healthy_optimal_as)}\n"
+          f"mean: {np.mean(healthy_optimal_as)}\n"  # = 0.45331890331890334
+          f"median: {np.median(healthy_optimal_as)}\n"
+          f"standard deviation: {np.std(healthy_optimal_as)}\n"
+          f"variance: {np.var(healthy_optimal_as)}\n")
+
+    statistic, pvalue = stats.ttest_ind(sz_optimal_as, healthy_optimal_as)
+    print(pvalue)
     ######
