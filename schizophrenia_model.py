@@ -223,6 +223,10 @@ if __name__ == "__main__":
     ######
 
 
+
+## everything below was used in older versions or can just be used for visualization ##
+
+
 ### run Hopf model 2 times and plot resulting FC and activity ###
 def runSingleHopf(sc_matrix, columns):
     fig_model, ax_model = plt.subplots(1, 2)
